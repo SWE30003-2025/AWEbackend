@@ -1,4 +1,4 @@
-# eCommerce Server
+# AWE Server
 This repo is responsible for developing the server for the AWE Website
 
 ## Local Database Setup
@@ -61,8 +61,11 @@ __Step2:__
     python manage.py runserver
 
 ## Verify server's working with DB
-Go to PgAdmin, checks if this exists under the correct database
+Go to PgAdmin, checks if this exists under the correct database![image](https://github.com/user-attachments/assets/9aea897b-429c-45bd-ab00-328d276b36d3)
 
-Right-click on the table -> View/Edit data -> All Rows
 
-Use POSTMAN or your browser, enter http://localhost:8000/api/user, verify that it returns an empty array
+Right-click on the table -> View/Edit data -> All Rows![image](https://github.com/user-attachments/assets/9ea3e73f-f576-4011-b57b-ce6ab75459a5)
+
+
+Use POSTMAN or your browser, enter http://localhost:8000/api/user, verify that it returns an empty array![image](https://github.com/user-attachments/assets/45fa3041-022d-40b5-a854-974cf61b1c53)
+
