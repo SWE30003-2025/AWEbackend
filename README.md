@@ -61,7 +61,7 @@ __Step2:__
     python manage.py runserver
 
 ## Verify server's working with DB
-Go to PgAdmin, checks if this exists under the correct database![image](https://github.com/user-attachments/assets/9aea897b-429c-45bd-ab00-328d276b36d3)
+Go to PgAdmin, checks if this exists under the correct database![image](https://github.com/user-attachments/assets/37c7f98a-0aff-4e7a-b4da-6fbc2828ba2d)
 
 
 Right-click on the table -> View/Edit data -> All Rows![image](https://github.com/user-attachments/assets/9ea3e73f-f576-4011-b57b-ce6ab75459a5)
