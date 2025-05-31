@@ -70,6 +70,6 @@ Right-click on the table -> View/Edit data -> All Rows![image](https://github.co
 Use POSTMAN or your browser, enter http://localhost:8000/api/user, verify that it returns an empty array![image](https://github.com/user-attachments/assets/45fa3041-022d-40b5-a854-974cf61b1c53)
 
 ## Load Fixtures
-To load the JSON fixtures into your database, run:
+To load the JSON fixtures into your database, run this after you run the latest migrations:
 
 -> python manage.py loaddata base/fixtures/fixtures.json
