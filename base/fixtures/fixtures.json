@@ -26,6 +26,19 @@
         }
     },
     {
+        "model": "base.usermodel",
+        "pk": "550e8400-e29b-41d4-a716-446655440021",
+        "fields": {
+            "username": "invmanager",
+            "email": "inventory.manager@aweelectronics.com",
+            "firstName": "Inventory",
+            "lastName": "Manager",
+            "phone": "0411222333",
+            "password": "inventory123",
+            "role": "inventory_manager"
+        }
+    },
+    {
         "model": "base.productmodel",
         "pk": "550e8400-e29b-41d4-a716-446655440002",
         "fields": {
