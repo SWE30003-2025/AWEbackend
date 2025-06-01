@@ -71,14 +71,14 @@ class UserViewSet(viewsets.ViewSet):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=["post"])
     def login(self, request):
         """
         Login endpoint.
         POST /api/user/login
         """
-        username = request.data.get('username')
-        password = request.data.get('password')
+        username = request.data.get("username")
+        password = request.data.get("password")
 
         if not username or not password:
             return Response(
@@ -102,7 +102,7 @@ class UserViewSet(viewsets.ViewSet):
                 status=status.HTTP_401_UNAUTHORIZED
             )
 
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=["post"])
     def signup(self, request):
         """
         Signup endpoint.
