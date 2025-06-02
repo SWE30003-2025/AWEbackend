@@ -9,6 +9,14 @@ class ProductModel(models.Model):
     stock       = models.PositiveIntegerField(default=0)
     created_at  = models.DateTimeField(auto_now_add=True)
     updated_at  = models.DateTimeField(auto_now=True)
+    category    = models.ForeignKey(
+        "base.CategoryModel",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        db_column="category_id",
+        related_name="products"
+    )
 
     def __str__(self):
         return self.name
