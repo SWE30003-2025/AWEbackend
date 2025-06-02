@@ -2,6 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.decorators import action
+from rest_framework.permissions import AllowAny
 from django.shortcuts import get_object_or_404
 from api.permissions import HasRolePermission
 from base.enums.role import ROLE
@@ -71,7 +72,7 @@ class UserViewSet(viewsets.ViewSet):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @action(detail=False, methods=["post"])
+    @action(detail=False, methods=["post"], permission_classes=[AllowAny])
     def login(self, request):
         """
         Login endpoint.
@@ -79,6 +80,8 @@ class UserViewSet(viewsets.ViewSet):
         """
         username = request.data.get("username")
         password = request.data.get("password")
+
+        print(f"[LOGIN] password from request repr: {repr(password)}") 
 
         if not username or not password:
             return Response(
@@ -88,9 +91,12 @@ class UserViewSet(viewsets.ViewSet):
 
         try:
             user = UserModel.objects.get(username=username)
-            if user.password == password:
+            print(f"username from request: {username}, password from request: {password}")
+            print(f"password in DB: {user.password}")
+            print("[LOGIN] check_password result:", user.check_password(password))
+            if user.check_password(password):
                 serializer = UserModelSerializer(user)
-                return Response(serializer.data)
+                return Response({"user": serializer.data})
             else:
                 return Response(
                     {"error": "Invalid credentials"},
@@ -102,8 +108,9 @@ class UserViewSet(viewsets.ViewSet):
                 status=status.HTTP_401_UNAUTHORIZED
             )
 
-    @action(detail=False, methods=["post"])
+    @action(detail=False, methods=["post"], permission_classes=[AllowAny])
     def signup(self, request):
+        print("HIT SIGNUP ENDPOINT!")
         """
         Signup endpoint.
         POST /api/user/signup
@@ -116,4 +123,3 @@ class UserViewSet(viewsets.ViewSet):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
