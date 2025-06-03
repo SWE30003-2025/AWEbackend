@@ -16,23 +16,23 @@ class ProductViewSet(viewsets.ViewSet):
         Optional query params:
         - categories (comma‑separated strings) e.g. ?categories=cat1,cat2
 
-        If categories is provided, returns products linked to *all* of those categories (including descendants).
+        If categories is provided, returns products linked to those categories.
         """
         querySet = ProductModel.objects.all()
 
         categoriesParam = request.query_params.get("categories")
         if categoriesParam:
             categoryIds = [c.strip() for c in categoriesParam.split(",") if c.strip()]
-            all_category_ids = set()
+            valid_category_ids = []
             for cat_id in categoryIds:
                 try:
-                    cat = CategoryModel.objects.get(id=cat_id)
-                    all_category_ids.add(cat.id)
-                    all_category_ids.update(cat.children.values_list("id", flat=True))
+                    CategoryModel.objects.get(id=cat_id)  # Just validate the category exists
+                    valid_category_ids.append(cat_id)
                 except CategoryModel.DoesNotExist:
                     pass  # Ignore invalid categories
-            if all_category_ids:
-                querySet = querySet.filter(category__in=all_category_ids)
+            
+            if valid_category_ids:
+                querySet = querySet.filter(category__in=valid_category_ids)
             else:
                 querySet = querySet.none()
 

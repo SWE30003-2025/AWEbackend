@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from base.models import UserModel, ProductModel, OrderModel, OrderItem
+from base.models import *
 
 class OrderItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source="product.name", read_only=True)
@@ -47,3 +47,8 @@ class ProductModelSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductModel
         fields = ["id", "name", "description", "price", "stock", "created_at", "updated_at"]
+
+class CategoryModelSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CategoryModel
+        fields = ["id", "name", "description"]

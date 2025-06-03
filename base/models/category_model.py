@@ -10,15 +10,6 @@ class CategoryModel(models.Model):
     )
     name = models.CharField(max_length=255)
     description = models.CharField(max_length=255)
-    parentCategory = models.ForeignKey(
-        "self",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        to_field="id",
-        db_column="parentCategory",
-        related_name="children"  # category.children.all() gives all direct children
-    )
 
     def save(self, *args, **kwargs):
         # Remove all whitespace and lowercase:
