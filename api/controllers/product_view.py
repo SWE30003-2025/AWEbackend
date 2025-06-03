@@ -40,6 +40,10 @@ class ProductViewSet(viewsets.ViewSet):
         return Response(serializer.data)
   
     def retrieve(self, request, pk=None):
+        """
+        GET /api/product/{id}/
+        Returns a specific product by ID.
+        """
         product = get_object_or_404(ProductModel, pk=pk)
         serializer = ProductModelSerializer(product)
         return Response(serializer.data)
