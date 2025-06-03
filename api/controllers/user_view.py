@@ -33,7 +33,7 @@ class UserViewSet(viewsets.ViewSet):
         user = get_object_or_404(UserModel, pk=pk)
         
         # Check if user is accessing their own data
-        if str(request.user.id) != str(pk):
+        if str(user.id) != str(pk):
             raise PermissionDenied("You can only view your own profile")
             
         serializer = UserModelSerializer(user)
