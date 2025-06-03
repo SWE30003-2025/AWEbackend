@@ -6,13 +6,37 @@ from api.permissions import HasRolePermission
 from base.enums.role import ROLE
 from rest_framework.exceptions import PermissionDenied
 
-from base.models import ProductModel
+from base.models import ProductModel, CategoryModel
 from api.serializers import ProductModelSerializer
 
 class ProductViewSet(viewsets.ViewSet):
     def list(self, request):
-        products = ProductModel.objects.all()
-        serializer = ProductModelSerializer(products, many=True)
+        """
+        GET /api/product/
+        Optional query params:
+        - categories (comma‑separated strings) e.g. ?categories=cat1,cat2
+
+        If categories is provided, returns products linked to *all* of those categories (including descendants).
+        """
+        querySet = ProductModel.objects.all()
+
+        categoriesParam = request.query_params.get("categories")
+        if categoriesParam:
+            categoryIds = [c.strip() for c in categoriesParam.split(",") if c.strip()]
+            all_category_ids = set()
+            for cat_id in categoryIds:
+                try:
+                    cat = CategoryModel.objects.get(id=cat_id)
+                    all_category_ids.add(cat.id)
+                    all_category_ids.update(cat.children.values_list("id", flat=True))
+                except CategoryModel.DoesNotExist:
+                    pass  # Ignore invalid categories
+            if all_category_ids:
+                querySet = querySet.filter(category__in=all_category_ids)
+            else:
+                querySet = querySet.none()
+
+        serializer = ProductModelSerializer(querySet, many=True)
         return Response(serializer.data)
   
     def retrieve(self, request, pk=None):
