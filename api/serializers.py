@@ -1,6 +1,5 @@
 from rest_framework import serializers
-from base.models import UserModel, ProductModel
-from base.models.order_model import OrderModel, OrderItem
+from base.models import UserModel, ProductModel, OrderModel, OrderItem
 
 class OrderItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source="product.name", read_only=True)

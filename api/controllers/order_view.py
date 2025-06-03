@@ -1,9 +1,13 @@
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from base.models.order_model import OrderModel, OrderItem
+from rest_framework.exceptions import PermissionDenied
+from base.models import OrderModel, OrderItem
 from api.serializers import OrderModelSerializer
 from django.db.models import Sum
+
+from api.permissions import HasRolePermission
+from base.enums.role import ROLE
 
 class OrderViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = OrderModelSerializer
@@ -22,9 +26,8 @@ class OrderViewSet(viewsets.ReadOnlyModelViewSet):
         """
         Returns basic sales analytics data for the admin dashboard.
         """
-        user = request.user
-        if not user.is_authenticated or not (hasattr(user, "role") and user.role == "admin"):
-            return Response({"detail": "Not authorized"}, status=403)
+        if not HasRolePermission([ROLE.ADMIN]).has_permission(request, self):
+            raise PermissionDenied("Only admin users can view all users")
 
         total_orders = OrderModel.objects.count()
         # Assume your OrderModel has a .total field, or calculate sum of items

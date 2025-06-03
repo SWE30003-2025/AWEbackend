@@ -1,6 +1,6 @@
 from rest_framework import permissions
 import base64
-from django.contrib.auth import authenticate
+from base.models import UserModel
 
 def get_authenticated_user(request):
     auth = request.META.get('HTTP_AUTHORIZATION')
@@ -10,8 +10,14 @@ def get_authenticated_user(request):
         _, encoded = auth.split(' ', 1)
         decoded = base64.b64decode(encoded).decode('utf-8')
         username, password = decoded.split(':', 1)
-        user = authenticate(username=username, password=password)
-        return user
+        # Do raw password checking instead of using authenticate
+        try:
+            user = UserModel.objects.get(username=username)
+            if user.password == password:  # Raw password comparison
+                return user
+            return None
+        except UserModel.DoesNotExist:
+            return None
     except Exception as e:
         print("[PERM] Error decoding auth header:", e)
         return None
