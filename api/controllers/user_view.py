@@ -76,12 +76,10 @@ class UserViewSet(viewsets.ViewSet):
     def login(self, request):
         """
         Login endpoint.
-        POST /api/user/login
+        POST /api/user/login/
         """
         username = request.data.get("username")
         password = request.data.get("password")
-
-        print(f"[LOGIN] password from request repr: {repr(password)}") 
 
         if not username or not password:
             return Response(
@@ -91,10 +89,8 @@ class UserViewSet(viewsets.ViewSet):
 
         try:
             user = UserModel.objects.get(username=username)
-            print(f"username from request: {username}, password from request: {password}")
-            print(f"password in DB: {user.password}")
-            print("[LOGIN] check_password result:", user.check_password(password))
-            if user.check_password(password):
+            # Raw password comparison - consistent with get_authenticated_user
+            if user.password == password:
                 serializer = UserModelSerializer(user)
                 return Response({"user": serializer.data})
             else:
