@@ -31,6 +31,12 @@ class UserModel(AbstractBaseUser):
         choices=[(role.value, role.name.title()) for role in ROLE],
         default=ROLE.CUSTOMER.value,
     )
+    wallet = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        default=0.00,
+        help_text="Customer's wallet balance (only used for customer role)"
+    )
 
     objects = UserManager()
 
@@ -39,6 +45,13 @@ class UserModel(AbstractBaseUser):
 
     def __str__(self):
         return f"{self.username}"
+
+    @property
+    def wallet_balance(self):
+        """Returns wallet balance for customers only"""
+        if self.role == ROLE.CUSTOMER.value:
+            return self.wallet
+        return None
 
     class Meta:
         db_table = "user"  # Overwrites the default table name

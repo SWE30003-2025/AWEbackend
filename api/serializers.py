@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from base.models import *
+from base.enums.role import ROLE
 
 class OrderItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source="product.name", read_only=True)
@@ -21,11 +22,42 @@ class OrderModelSerializer(serializers.ModelSerializer):
 
 class UserModelSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False)
+    wallet = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
 
     class Meta:
         model = UserModel
-        fields = ["id", "username", "email", "firstName", "lastName", "phone", "role", "password"]
+        fields = ["id", "username", "email", "firstName", "lastName", "phone", "role", "password", "wallet"]
         read_only_fields = ["id", "role", "username", "email"]
+
+    def to_representation(self, instance):
+        """Customize the representation to only include wallet for customers"""
+        data = super().to_representation(instance)
+        
+        # Only include wallet for customers
+        if instance.role != ROLE.CUSTOMER.value:
+            data.pop('wallet', None)
+        
+        return data
+
+    def validate_wallet(self, value):
+        """Validate wallet field"""
+        if value is not None and value < 0:
+            raise serializers.ValidationError("Wallet balance cannot be negative")
+        return value
+
+    def validate(self, attrs):
+        """Validate that only customers can modify wallet"""
+        wallet = attrs.get('wallet')
+        
+        # If updating an existing instance
+        if self.instance:
+            # Only allow wallet updates for customers
+            if wallet is not None and self.instance.role != ROLE.CUSTOMER.value:
+                raise serializers.ValidationError(
+                    {"wallet": "Wallet feature is only available for customers"}
+                )
+        
+        return attrs
 
     def update(self, instance, validated_data):
         password = validated_data.pop("password", None)

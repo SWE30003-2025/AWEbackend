@@ -4,7 +4,7 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from django.shortcuts import get_object_or_404
-from api.permissions import HasRolePermission
+from api.permissions import HasRolePermission, get_authenticated_user
 from base.enums.role import ROLE
 
 from base.models import UserModel
@@ -33,7 +33,11 @@ class UserViewSet(viewsets.ViewSet):
         user = get_object_or_404(UserModel, pk=pk)
         
         # Check if user is accessing their own data
-        if str(user.id) != str(pk):
+        current_user = get_authenticated_user(request)
+        if not current_user:
+            raise PermissionDenied("Authentication required")
+            
+        if str(current_user.id) != str(pk):
             raise PermissionDenied("You can only view your own profile")
             
         serializer = UserModelSerializer(user)
@@ -59,11 +63,16 @@ class UserViewSet(viewsets.ViewSet):
         Update a UserModel record.
         PUT /api/user/{pk}
         Users can only update their own profile.
+        For customers, wallet field can be updated.
         """
         user = get_object_or_404(UserModel, pk=pk)
         
-        # Check if user is updating their own data
-        if str(request.user.id) != str(pk):
+        # Check if user is updating their own data or is admin
+        current_user = get_authenticated_user(request)
+        if not current_user:
+            raise PermissionDenied("Authentication required")
+        
+        if str(current_user.id) != str(pk):
             raise PermissionDenied("You can only update your own profile")
         
         serializer = UserModelSerializer(user, data=request.data, partial=True)
