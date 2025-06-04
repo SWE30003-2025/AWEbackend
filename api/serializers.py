@@ -9,16 +9,26 @@ class OrderItemSerializer(serializers.ModelSerializer):
         fields = ['product', 'product_name', 'quantity', 'price']
         # You may include 'product' (as ID) and 'product_name' (as read-only)
 
+class ShipmentModelSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ShipmentModel
+        fields = [
+            'id', 'tracking_number', 'status', 'carrier', 
+            'estimated_delivery', 'actual_delivery', 'created_at', 
+            'updated_at'
+        ]
+
 class OrderModelSerializer(serializers.ModelSerializer):
     total = serializers.SerializerMethodField()
+    items = OrderItemSerializer(many=True, read_only=True)
+    shipment = ShipmentModelSerializer(read_only=True)
 
     class Meta:
         model = OrderModel
-        fields = ['id', 'user', 'created_at', 'status', 'total', 'items']
+        fields = ['id', 'user', 'created_at', 'status', 'total', 'items', 'shipment']
 
     def get_total(self, obj):
         return obj.total
-
 
 class UserModelSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False)

@@ -10,5 +10,10 @@ class OrderModel(models.Model):
     def __str__(self):
         return f"Order {self.pk} by {self.user.username}"
 
+    @property
+    def total(self):
+        """Calculate total price of all items in this order"""
+        return sum(item.price * item.quantity for item in self.items.all())
+
     class Meta:
         db_table = "order"  
