@@ -1,14 +1,17 @@
 from rest_framework import viewsets, status
 from rest_framework.response import Response
-from rest_framework.exceptions import PermissionDenied
-from django.shortcuts import get_object_or_404
 from base.models import ShoppingCartModel, CartItemModel, ProductModel
 from api.serializers import ShoppingCartModelSerializer, CartItemModelSerializer
 from api.permissions import HasRolePermission, get_authenticated_user
 from base.enums.role import ROLE
 
 class ShoppingCartViewSet(viewsets.ViewSet):
-    permission_classes = [HasRolePermission([ROLE.CUSTOMER])]
+    
+    def get_permissions(self):
+        """
+        Instantiates and returns the list of permissions that this view requires.
+        """
+        return [HasRolePermission([ROLE.CUSTOMER])]
 
     def _get_or_create_cart(self, user):
         """Get or create a shopping cart for the user"""
@@ -79,7 +82,7 @@ class ShoppingCartViewSet(viewsets.ViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-    def update(self, request, pk=None):
+    def put(self, request):
         """
         Update the quantity of an item in the cart
         PUT /api/shopping-cart/
@@ -130,7 +133,7 @@ class ShoppingCartViewSet(viewsets.ViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-    def destroy(self, request, pk=None):
+    def delete(self, request):
         """
         Remove an item from the cart
         DELETE /api/shopping-cart/
