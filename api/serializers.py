@@ -25,7 +25,10 @@ class OrderModelSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = OrderModel
-        fields = ['id', 'user', 'created_at', 'status', 'total', 'items', 'shipment']
+        fields = [
+            'id', 'user', 'created_at', 'status', 'total', 'items', 'shipment',
+            'shipping_full_name', 'shipping_address', 'shipping_city', 'shipping_postal_code'
+        ]
 
     def get_total(self, obj):
         return obj.total
