@@ -97,3 +97,38 @@ class ProductModelSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductModel
         fields = ["id", "name", "description", "price", "stock", "category", "category_id"]
+
+class CartItemModelSerializer(serializers.ModelSerializer):
+    product_name = serializers.CharField(source="product.name", read_only=True)
+    product_price = serializers.DecimalField(source="product.price", max_digits=10, decimal_places=2, read_only=True)
+    subtotal = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = CartItemModel
+        fields = ['id', 'product', 'product_name', 'product_price', 'quantity', 'subtotal']
+        read_only_fields = ['id']
+
+    def get_subtotal(self, obj):
+        return obj.subtotal
+
+    def validate_quantity(self, value):
+        """Validate that quantity is positive"""
+        if value <= 0:
+            raise serializers.ValidationError("Quantity must be greater than 0")
+        return value
+
+class ShoppingCartModelSerializer(serializers.ModelSerializer):
+    items = CartItemModelSerializer(many=True, read_only=True)
+    total = serializers.SerializerMethodField()
+    total_items = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = ShoppingCartModel
+        fields = ['id', 'user', 'total', 'total_items', 'items']
+        read_only_fields = ['id', 'user']
+
+    def get_total(self, obj):
+        return obj.total
+
+    def get_total_items(self, obj):
+        return obj.total_items
