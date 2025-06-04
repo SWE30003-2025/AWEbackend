@@ -2,7 +2,7 @@ from django.db import models
 from .order_model import OrderModel
 from .product_model import ProductModel
 
-class OrderItem(models.Model):
+class OrderItemModel(models.Model):
     id = models.AutoField(primary_key=True)
     order = models.ForeignKey(OrderModel, on_delete=models.CASCADE, related_name="items")
     product = models.ForeignKey(ProductModel, on_delete=models.PROTECT)

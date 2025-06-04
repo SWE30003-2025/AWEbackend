@@ -2,8 +2,8 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
-from base.models import OrderModel, OrderItem
-from api.serializers import OrderModelSerializer, OrderItemSerializer
+from base.models import OrderModel, OrderItemModel, InvoiceModel
+from api.serializers import OrderModelSerializer, OrderItemSerializer, InvoiceModelSerializer
 from django.db.models import Sum
 from base.managers import ShipmentManager
 
@@ -45,7 +45,7 @@ class OrderViewSet(viewsets.ReadOnlyModelViewSet):
 
         # Top products by quantity sold
         top_products = (
-            OrderItem.objects
+            OrderItemModel.objects
                 .values('product__name')
                 .annotate(total_sold=Sum('quantity'))
                 .order_by('-total_sold')[:5]
@@ -79,4 +79,28 @@ class OrderViewSet(viewsets.ReadOnlyModelViewSet):
             return Response(
                 {"error": "No shipment found for this order"}, 
                 status=status.HTTP_404_NOT_FOUND
+            )
+
+    @action(detail=True, methods=['get'], url_path='invoice')
+    def retrieve_invoice(self, request, pk=None):
+        """
+        Retrieve the invoice for a specific order.
+        GET /api/order/{order_id}/invoice/
+        """
+        order = self.get_object() # This already filters based on get_queryset
+        
+        try:
+            invoice = InvoiceModel.objects.get(order=order)
+            serializer = InvoiceModelSerializer(invoice)
+            return Response(serializer.data)
+        except InvoiceModel.DoesNotExist:
+            return Response(
+                {"error": "Invoice not found for this order"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            # Log the exception e
+            return Response(
+                {"error": "An error occurred while retrieving the invoice."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )

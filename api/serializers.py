@@ -5,9 +5,8 @@ from base.enums.role import ROLE
 class OrderItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source="product.name", read_only=True)
     class Meta:
-        model = OrderItem
+        model = OrderItemModel
         fields = ['product', 'product_name', 'quantity', 'price']
-        # You may include 'product' (as ID) and 'product_name' (as read-only)
 
 class ShipmentModelSerializer(serializers.ModelSerializer):
     class Meta:
@@ -17,16 +16,39 @@ class ShipmentModelSerializer(serializers.ModelSerializer):
             'estimated_delivery', 'actual_delivery', 'created_at', 
             'updated_at'
         ]
+        
+class InvoiceModelSerializer(serializers.ModelSerializer):
+    receipts = serializers.SerializerMethodField()
+
+    class Meta:
+        model = InvoiceModel
+        fields = ['id', 'invoice_number', 'amount_due', 'status', 'due_date', 'created_at', 'receipts']
+
+    def get_receipts(self, obj):
+        # An invoice can have multiple payments (though current logic implies one)
+        # Each payment has one receipt
+        receipt_data = []
+        for payment in obj.payments.all(): # obj is an InvoiceModel instance
+            if hasattr(payment, 'receipt') and payment.receipt:
+                serializer = ReceiptModelSerializer(payment.receipt)
+                receipt_data.append(serializer.data)
+        return receipt_data
+
+class ReceiptModelSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReceiptModel
+        fields = ['id', 'receipt_number', 'amount_paid', 'created_at']
 
 class OrderModelSerializer(serializers.ModelSerializer):
     total = serializers.SerializerMethodField()
     items = OrderItemSerializer(many=True, read_only=True)
-    shipment = ShipmentModelSerializer(read_only=True)
+    shipment = ShipmentModelSerializer(read_only=True, allow_null=True)
 
     class Meta:
         model = OrderModel
         fields = [
-            'id', 'user', 'created_at', 'status', 'total', 'items', 'shipment',
+            'id', 'user', 'created_at', 'status', 'payment_status',
+            'total', 'items', 'shipment', 'invoice',
             'shipping_full_name', 'shipping_address', 'shipping_city', 'shipping_postal_code'
         ]
 
