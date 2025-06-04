@@ -43,12 +43,15 @@ class UserModelSerializer(serializers.ModelSerializer):
         user.save()
         return user
 
-class ProductModelSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ProductModel
-        fields = ["id", "name", "description", "price", "stock", "category"]
-
 class CategoryModelSerializer(serializers.ModelSerializer):
     class Meta:
         model = CategoryModel
         fields = ["id", "name", "description"]
+
+class ProductModelSerializer(serializers.ModelSerializer):
+    category = serializers.CharField(source='category.name', read_only=True)
+    category_id = serializers.CharField(write_only=True, source='category', allow_null=True, required=False)
+    
+    class Meta:
+        model = ProductModel
+        fields = ["id", "name", "description", "price", "stock", "category", "category_id"]
