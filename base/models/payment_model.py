@@ -1,7 +1,9 @@
 from django.db import models
+
 from .user_model import UserModel
 from .invoice_model import InvoiceModel
-from base.enums.payment_status import PAYMENT_STATUS
+
+from base.enums import PAYMENT_STATUS
 
 class PaymentModel(models.Model):
     id = models.AutoField(primary_key=True)

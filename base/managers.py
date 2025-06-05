@@ -16,7 +16,7 @@ class InventoryManager:
 
     def get_stock(self, product_id):
         product = ProductModel.objects.get(pk=product_id)
-        return getattr(product, 'stock', None)
+        return getattr(product, "stock", None)
 
     def set_stock(self, product_id, quantity):
         product = ProductModel.objects.get(pk=product_id)
@@ -26,14 +26,14 @@ class InventoryManager:
 
     def adjust_stock(self, product_id, amount):
         product = ProductModel.objects.get(pk=product_id)
-        if not hasattr(product, 'stock'):
+        if not hasattr(product, "stock"):
             product.stock = 0
         product.stock += amount
         product.save()
         return product.stock
 
     def all_inventory(self):
-        return [(p, getattr(p, 'stock', None)) for p in ProductModel.objects.all()] 
+        return [(p, getattr(p, "stock", None)) for p in ProductModel.objects.all()] 
 
 
 class ShipmentManager:
@@ -89,12 +89,12 @@ class ShipmentManager:
         try:
             shipment = ShipmentModel.objects.get(tracking_number=tracking_number)
             return {
-                'tracking_number': shipment.tracking_number,
-                'status': shipment.status,
-                'carrier': shipment.carrier,
-                'estimated_delivery': shipment.estimated_delivery,
-                'actual_delivery': shipment.actual_delivery,
-                'order_id': shipment.order.id
+                "tracking_number": shipment.tracking_number,
+                "status": shipment.status,
+                "carrier": shipment.carrier,
+                "estimated_delivery": shipment.estimated_delivery,
+                "actual_delivery": shipment.actual_delivery,
+                "order_id": shipment.order.id,
             }
         except ShipmentModel.DoesNotExist:
             return None 

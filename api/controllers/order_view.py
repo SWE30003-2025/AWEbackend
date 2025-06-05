@@ -7,7 +7,6 @@ from rest_framework.exceptions import PermissionDenied
 
 from base.models import OrderModel, OrderItemModel, InvoiceModel
 from base.enums import ROLE
-from base.managers import ShipmentManager
 
 from api.serializers import InvoiceModelSerializer, OrderModelSerializer
 from api.permissions import HasRolePermission, get_authenticated_user

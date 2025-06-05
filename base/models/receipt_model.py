@@ -1,4 +1,5 @@
 from django.db import models
+
 from .payment_model import PaymentModel
 
 class ReceiptModel(models.Model):

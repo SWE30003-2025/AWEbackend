@@ -1,7 +1,9 @@
 from django.db import models
 from django.utils import timezone
+
 from .order_model import OrderModel
-from base.enums.invoice_status import INVOICE_STATUS
+
+from base.enums import INVOICE_STATUS
 
 class InvoiceModel(models.Model):
     id = models.AutoField(primary_key=True)

@@ -1,7 +1,7 @@
 from rest_framework.routers import DefaultRouter
 from .controllers import *
 
-router = DefaultRouter()  # Use default, includes trailing slashes
+router = DefaultRouter()
 router.register(r"user", UserViewSet, "user")
 router.register(r"product", ProductViewSet, "product")
 router.register(r"inventory", InventoryViewSet, "inventory")

@@ -1,6 +1,8 @@
+import uuid
+
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.db import models
-import uuid
+
 from base.enums import ROLE
 
 class UserManager(BaseUserManager):

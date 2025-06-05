@@ -1,25 +1,26 @@
-from rest_framework import permissions
 import base64
+
+from rest_framework import permissions
+
 from base.models import UserModel
 
 def get_authenticated_user(request):
-    auth = request.META.get('HTTP_AUTHORIZATION')
-    if not auth or not auth.startswith('Basic '):
+    auth = request.META.get("HTTP_AUTHORIZATION")
+    if not auth or not auth.startswith("Basic "):
         return None
     try:
-        _, encoded = auth.split(' ', 1)
-        decoded = base64.b64decode(encoded).decode('utf-8')
-        username, password = decoded.split(':', 1)
+        _, encoded = auth.split(" ", 1)
+        decoded = base64.b64decode(encoded).decode("utf-8")
+        username, password = decoded.split(":", 1)
         # Do raw password checking instead of using authenticate
         try:
             user = UserModel.objects.get(username=username)
-            if user.password == password:  # Raw password comparison
+            if user.password == password:
                 return user
             return None
         except UserModel.DoesNotExist:
             return None
     except Exception as e:
-        print("[PERM] Error decoding auth header:", e)
         return None
 
 class HasRolePermission(permissions.BasePermission):

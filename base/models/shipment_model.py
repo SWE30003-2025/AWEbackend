@@ -1,6 +1,8 @@
 from django.db import models
+
 from .order_model import OrderModel
-from base.enums.shipment_status import SHIPMENT_STATUS
+
+from base.enums import SHIPMENT_STATUS
 
 class ShipmentModel(models.Model):
     id = models.AutoField(primary_key=True)

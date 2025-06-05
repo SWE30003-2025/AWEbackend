@@ -1,15 +1,16 @@
 from django.db import models
+
 from .user_model import UserModel
-from base.enums.order_payment_status import ORDER_PAYMENT_STATUS
+from base.enums import ORDER_PAYMENT_STATUS
 
 class OrderModel(models.Model):
     id = models.AutoField(primary_key=True)
     user = models.ForeignKey(UserModel, on_delete=models.CASCADE, related_name="orders")
     created_at = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=32, default="processing")  # e.g., processing, shipped, delivered, cancelled
+    status = models.CharField(max_length=32, default="processing")
     payment_status = models.CharField(
         max_length=20,
-        choices=[(status.value, status.name.replace('_', ' ').title()) for status in ORDER_PAYMENT_STATUS],
+        choices=[(status.value, status.name.replace("_", " ").title()) for status in ORDER_PAYMENT_STATUS],
         default=ORDER_PAYMENT_STATUS.PENDING.value
     )
     

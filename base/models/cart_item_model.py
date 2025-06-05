@@ -1,4 +1,5 @@
 from django.db import models
+
 from .shopping_cart_model import ShoppingCartModel
 from .product_model import ProductModel
 
@@ -18,4 +19,4 @@ class CartItemModel(models.Model):
 
     class Meta:
         db_table = "cart_item"
-        unique_together = ('cart', 'product')  # Prevent duplicate products in same cart 
+        unique_together = ("cart", "product")  
