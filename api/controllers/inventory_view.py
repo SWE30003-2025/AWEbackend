@@ -12,21 +12,14 @@ from api.serializers import ProductModelSerializer
 class InventoryViewSet(viewsets.ViewSet):
     @action(detail=True, methods=["post"])
     def update_stock(self, request, pk=None):
-        # Permission check: only inventory managers
-        if not HasRolePermission([ROLE.INVENTORY_MANAGER]).has_permission(request, self):
-            raise PermissionDenied("Only inventory managers can update stock.")
+        # Permission check: inventory managers and admins
+        if not HasRolePermission([ROLE.INVENTORY_MANAGER, ROLE.ADMIN]).has_permission(request, self):
+            raise PermissionDenied("Only inventory managers and admins can update stock.")
         
         product = get_object_or_404(ProductModel, pk=pk)
         manager = InventoryManager()
 
-        if "quantity" in request.data:
-            try:
-                quantity = int(request.data["quantity"])
-            except ValueError:
-                return Response({"error": "Quantity must be an integer."}, status=status.HTTP_400_BAD_REQUEST)
-            new_stock = manager.set_stock(product.id, quantity)
-            action_type = "set"
-        elif "amount" in request.data:
+        if "amount" in request.data:
             try:
                 amount = int(request.data["amount"])
             except ValueError:
@@ -34,7 +27,7 @@ class InventoryViewSet(viewsets.ViewSet):
             new_stock = manager.adjust_stock(product.id, amount)
             action_type = "adjusted"
         else:
-            return Response({"error": "Provide either quantity or amount."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Provide amount to adjust stock."}, status=status.HTTP_400_BAD_REQUEST)
 
         serializer = ProductModelSerializer(product)
         return Response({
