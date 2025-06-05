@@ -15,10 +15,20 @@ class ProductViewSet(viewsets.ViewSet):
         GET /api/product/
         Optional query params:
         - categories (comma‑separated strings) e.g. ?categories=cat1,cat2
+        - include_inactive (boolean) e.g. ?include_inactive=true (admin only)
 
         If categories is provided, returns products linked to those categories.
+        By default, only returns active products unless include_inactive=true and user is admin.
         """
         querySet = ProductModel.objects.all()
+
+        # Handle include_inactive parameter (admin only)
+        include_inactive = request.query_params.get("include_inactive", "false").lower() == "true"
+        if not include_inactive:
+            querySet = querySet.filter(is_active=True)
+        elif include_inactive and not HasRolePermission([ROLE.ADMIN]).has_permission(request, self):
+            # Non-admin users cannot see inactive products
+            querySet = querySet.filter(is_active=True)
 
         categoriesParam = request.query_params.get("categories")
         if categoriesParam:
@@ -72,10 +82,40 @@ class ProductViewSet(viewsets.ViewSet):
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def destroy(self, request, pk=None):
+    @action(detail=True, methods=['post'], url_path='enable')
+    def enable_product(self, request, pk=None):
+        """
+        POST /api/product/{id}/enable/
+        Enable a product (set is_active=True). Admin only.
+        """
         if not HasRolePermission([ROLE.ADMIN]).has_permission(request, self):
-            raise PermissionDenied("Only admin users can delete products")
+            raise PermissionDenied("Only admin users can enable products")
             
         product = get_object_or_404(ProductModel, pk=pk)
-        product.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        product.is_active = True
+        product.save()
+        
+        serializer = ProductModelSerializer(product)
+        return Response({
+            "message": f"Product '{product.name}' has been enabled",
+            "product": serializer.data
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], url_path='disable')
+    def disable_product(self, request, pk=None):
+        """
+        POST /api/product/{id}/disable/
+        Disable a product (set is_active=False). Admin only.
+        """
+        if not HasRolePermission([ROLE.ADMIN]).has_permission(request, self):
+            raise PermissionDenied("Only admin users can disable products")
+            
+        product = get_object_or_404(ProductModel, pk=pk)
+        product.is_active = False
+        product.save()
+        
+        serializer = ProductModelSerializer(product)
+        return Response({
+            "message": f"Product '{product.name}' has been disabled",
+            "product": serializer.data
+        }, status=status.HTTP_200_OK)

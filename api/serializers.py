@@ -117,11 +117,43 @@ class CategoryModelSerializer(serializers.ModelSerializer):
 
 class ProductModelSerializer(serializers.ModelSerializer):
     category = serializers.CharField(source='category.name', read_only=True)
-    category_id = serializers.CharField(write_only=True, source='category', allow_null=True, required=False)
+    category_id = serializers.CharField(write_only=True, allow_null=True, required=False)
     
     class Meta:
         model = ProductModel
-        fields = ["id", "name", "description", "price", "stock", "category", "category_id"]
+        fields = ["id", "name", "description", "price", "stock", "category", "category_id", "is_active"]
+    
+    def create(self, validated_data):
+        category_id = validated_data.pop('category_id', None)
+        if category_id:
+            try:
+                # Try to get category by ID first
+                category = CategoryModel.objects.get(id=category_id)
+                validated_data['category'] = category
+            except CategoryModel.DoesNotExist:
+                # If that fails, try to get by name
+                try:
+                    category = CategoryModel.objects.get(name=category_id)
+                    validated_data['category'] = category
+                except CategoryModel.DoesNotExist:
+                    raise serializers.ValidationError(f"Category '{category_id}' not found")
+        return super().create(validated_data)
+    
+    def update(self, instance, validated_data):
+        category_id = validated_data.pop('category_id', None)
+        if category_id:
+            try:
+                # Try to get category by ID first
+                category = CategoryModel.objects.get(id=category_id)
+                validated_data['category'] = category
+            except CategoryModel.DoesNotExist:
+                # If that fails, try to get by name
+                try:
+                    category = CategoryModel.objects.get(name=category_id)
+                    validated_data['category'] = category
+                except CategoryModel.DoesNotExist:
+                    raise serializers.ValidationError(f"Category '{category_id}' not found")
+        return super().update(instance, validated_data)
 
 class CartItemModelSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source="product.name", read_only=True)

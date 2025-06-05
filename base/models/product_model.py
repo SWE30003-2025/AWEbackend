@@ -7,6 +7,7 @@ class ProductModel(models.Model):
     description = models.CharField(max_length=255)
     price       = models.DecimalField(max_digits=10, decimal_places=2)
     stock       = models.PositiveIntegerField(default=0)
+    is_active   = models.BooleanField(default=True)
     category    = models.ForeignKey(
         "base.CategoryModel",
         on_delete=models.SET_NULL,
