@@ -2,12 +2,13 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
-from django.shortcuts import get_object_or_404
+
 from base.models import ShipmentModel
-from api.serializers import ShipmentModelSerializer
 from base.managers import ShipmentManager
+from base.enums import ROLE
+
 from api.permissions import HasRolePermission, get_authenticated_user
-from base.enums.role import ROLE
+from api.serializers import ShipmentModelSerializer
 
 class ShipmentViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = ShipmentModelSerializer
@@ -18,47 +19,10 @@ class ShipmentViewSet(viewsets.ReadOnlyModelViewSet):
         if not user:
             return ShipmentModel.objects.none()
         
-        # Admins and shipment managers can see all shipments
-        if hasattr(user, 'role') and user.role in [ROLE.ADMIN.value, ROLE.SHIPMENT_MANAGER.value]:
+        if HasRolePermission([ROLE.ADMIN, ROLE.SHIPMENT_MANAGER]).has_permission(self.request, self):
             return ShipmentModel.objects.all()
         
-        # Customers can only see their own shipments
         return ShipmentModel.objects.filter(order__user=user)
-
-    @action(detail=False, methods=['get'], url_path='track')
-    def track_by_number(self, request):
-        """
-        Track a shipment by tracking number.
-        GET /api/shipment/track/?tracking_number=XXXXX
-        """
-        tracking_number = request.query_params.get('tracking_number')
-        
-        if not tracking_number:
-            return Response(
-                {"error": "tracking_number query parameter is required"}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        shipment_manager = ShipmentManager()
-        tracking_info = shipment_manager.get_shipment_status(tracking_number)
-        
-        if tracking_info:
-            # Check if user can access this shipment
-            user = get_authenticated_user(request)
-            try:
-                shipment = ShipmentModel.objects.get(tracking_number=tracking_number)
-                if (shipment.order.user != user and 
-                    not (hasattr(user, 'role') and user.role in [ROLE.ADMIN.value, ROLE.SHIPMENT_MANAGER.value])):
-                    raise PermissionDenied("You can only track your own shipments")
-            except ShipmentModel.DoesNotExist:
-                pass
-            
-            return Response(tracking_info)
-        else:
-            return Response(
-                {"error": "Tracking number not found"}, 
-                status=status.HTTP_404_NOT_FOUND
-            )
 
     @action(detail=True, methods=['post'], url_path='update-status')
     def update_status(self, request, pk=None):
