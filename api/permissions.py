@@ -28,14 +28,11 @@ class HasRolePermission(permissions.BasePermission):
 
     def has_permission(self, request, view):
         user = get_authenticated_user(request)
-        print("[PERM] user:", user)
         if user:
-            print("[PERM] is_authenticated:", user.is_authenticated)
-            print("[PERM] user.role:", getattr(user, "role", None))
-            print("[PERM] allowed_roles:", [role.value for role in self.allowed_roles])
             return (
                 user.is_authenticated
                 and hasattr(user, "role")
                 and user.role in [role.value for role in self.allowed_roles]
             )
+        
         return False

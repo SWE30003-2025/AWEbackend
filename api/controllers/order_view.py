@@ -1,14 +1,16 @@
+from django.db.models import Sum
+
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
+
 from base.models import OrderModel, OrderItemModel, InvoiceModel
-from api.serializers import OrderModelSerializer, OrderItemSerializer, InvoiceModelSerializer
-from django.db.models import Sum
+from base.enums import ROLE
 from base.managers import ShipmentManager
 
+from api.serializers import InvoiceModelSerializer, OrderModelSerializer
 from api.permissions import HasRolePermission, get_authenticated_user
-from base.enums.role import ROLE
 
 class OrderViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = OrderModelSerializer
@@ -20,35 +22,28 @@ class OrderViewSet(viewsets.ReadOnlyModelViewSet):
             return OrderModel.objects.none()
         
         # Admins can see all orders
-        if hasattr(user, 'role') and user.role == ROLE.ADMIN.value:
+        if HasRolePermission([ROLE.ADMIN]).has_permission(self.request, self):
             return OrderModel.objects.all()
         
         # Customers can only see their own orders
         return OrderModel.objects.filter(user=user)
 
-    @action(detail=False, methods=['get'], url_path='analytics')
+    @action(detail=False, methods=["get"], url_path="analytics")
     def analytics(self, request):
-        """
-        Returns basic sales analytics data for the admin dashboard.
-        """
-        # Check permissions using HasRolePermission
-        permission_check = HasRolePermission([ROLE.ADMIN, ROLE.STATISTICS_MANAGER])
-        if not permission_check.has_permission(request, self):
-            raise PermissionDenied("Only admin users can view analytics")
+        if not HasRolePermission([ROLE.ADMIN, ROLE.STATISTICS_MANAGER]).has_permission(request, self):
+            raise PermissionDenied("Only admin and statistics manager users can view analytics")
 
         total_orders = OrderModel.objects.count()
-        # Calculate total sales
         total_sales = sum(
             sum(item.price * item.quantity for item in order.items.all())
             for order in OrderModel.objects.all()
         )
 
-        # Top products by quantity sold
         top_products = (
             OrderItemModel.objects
-                .values('product__name')
-                .annotate(total_sold=Sum('quantity'))
-                .order_by('-total_sold')[:5]
+                .values("product__name")
+                .annotate(total_sold=Sum("quantity"))
+                .order_by("-total_sold")[:5]
         )
 
         return Response({
@@ -57,7 +52,7 @@ class OrderViewSet(viewsets.ReadOnlyModelViewSet):
             "top_products": list(top_products),
         })
 
-    @action(detail=True, methods=['get'], url_path='track')
+    @action(detail=True, methods=["get"], url_path="track")
     def track_shipment(self, request, pk=None):
         """
         Track the shipment for a specific order.

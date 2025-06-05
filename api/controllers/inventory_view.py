@@ -1,18 +1,20 @@
+from django.shortcuts import get_object_or_404
+
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
-from django.shortcuts import get_object_or_404
+
 from base.managers import InventoryManager
-from base.models.product_model import ProductModel
+from base.models import ProductModel
+from base.enums import ROLE
+
 from api.permissions import HasRolePermission
-from base.enums.role import ROLE
 from api.serializers import ProductModelSerializer
 
 class InventoryViewSet(viewsets.ViewSet):
     @action(detail=True, methods=["post"])
     def update_stock(self, request, pk=None):
-        # Permission check: inventory managers and admins
         if not HasRolePermission([ROLE.INVENTORY_MANAGER, ROLE.ADMIN]).has_permission(request, self):
             raise PermissionDenied("Only inventory managers and admins can update stock.")
         
@@ -30,6 +32,7 @@ class InventoryViewSet(viewsets.ViewSet):
             return Response({"error": "Provide amount to adjust stock."}, status=status.HTTP_400_BAD_REQUEST)
 
         serializer = ProductModelSerializer(product)
+        
         return Response({
             "message": f"Stock {action_type}.",
             "product": serializer.data,
