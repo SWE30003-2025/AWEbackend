@@ -14,7 +14,7 @@ class ShipmentModelSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'tracking_number', 'status', 'carrier', 
             'estimated_delivery', 'actual_delivery', 'created_at', 
-            'updated_at'
+            'updated_at', "order_id"
         ]
         
 class InvoiceModelSerializer(serializers.ModelSerializer):
