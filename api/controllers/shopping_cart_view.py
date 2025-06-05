@@ -1,26 +1,21 @@
-from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from django.db import transaction
-from django.utils import timezone
 from datetime import timedelta
 import uuid
 
-from base.models import ShoppingCartModel, CartItemModel, ProductModel, OrderModel, OrderItemModel
-from base.models import InvoiceModel, PaymentModel, ReceiptModel
-from api.serializers import ShoppingCartModelSerializer
-from base.managers import InventoryManager, ShipmentManager
-from api.permissions import HasRolePermission, get_authenticated_user
-from base.enums.role import ROLE
-from base.enums.invoice_status import INVOICE_STATUS
+from django.db import transaction
+from django.utils import timezone
 
-from base.enums.order_payment_status import ORDER_PAYMENT_STATUS
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+
+from base.models import ShoppingCartModel, CartItemModel, ProductModel, OrderModel, OrderItemModel, InvoiceModel, PaymentModel, ReceiptModel
+from base.managers import InventoryManager, ShipmentManager
+from base.enums import ROLE, INVOICE_STATUS, ORDER_PAYMENT_STATUS
+
+from api.serializers import ShoppingCartModelSerializer
+from api.permissions import HasRolePermission, get_authenticated_user
 
 class ShoppingCartViewSet(viewsets.ViewSet):
-    """
-    Shopping cart operations for customers
-    """
-    
     def get_permissions(self):
         """Ensure only customers can access the shopping cart"""
         return [HasRolePermission([ROLE.CUSTOMER])]
@@ -30,6 +25,7 @@ class ShoppingCartViewSet(viewsets.ViewSet):
         user = get_authenticated_user(request)
         cart, created = ShoppingCartModel.objects.get_or_create(user=user)
         serializer = ShoppingCartModelSerializer(cart)
+
         return Response(serializer.data)
 
     def create(self, request):
@@ -52,7 +48,7 @@ class ShoppingCartViewSet(viewsets.ViewSet):
             cart_item, item_created = CartItemModel.objects.get_or_create(
                 cart=cart,
                 product=product,
-                defaults={'quantity': quantity}
+                defaults={"quantity": quantity}
             )
             
             if not item_created:
@@ -61,19 +57,20 @@ class ShoppingCartViewSet(viewsets.ViewSet):
                 cart_item.save()
 
             serializer = ShoppingCartModelSerializer(cart)
+
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         except ProductModel.DoesNotExist:
-            return Response(
-                {"error": "Product not found"}, 
-                status=status.HTTP_404_NOT_FOUND
-            )
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
     def update(self, request, pk=None):
-        """Update item quantity in cart - PUT /api/shopping-cart/"""
+        """
+        Update item quantity in cart - 
+        PUT /api/shopping-cart/
+        """
         user = get_authenticated_user(request)
-        product_id = request.data.get('product_id')
-        quantity = request.data.get('quantity')
+        product_id = request.data.get("product_id")
+        quantity = request.data.get("quantity")
 
         if not product_id or quantity is None:
             return Response(
@@ -92,18 +89,19 @@ class ShoppingCartViewSet(viewsets.ViewSet):
                 cart_item.save()
 
             serializer = ShoppingCartModelSerializer(cart)
+
             return Response(serializer.data)
 
         except (ShoppingCartModel.DoesNotExist, CartItemModel.DoesNotExist):
-            return Response(
-                {"error": "Cart item not found"}, 
-                status=status.HTTP_404_NOT_FOUND
-            )
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
     def destroy(self, request, pk=None):
-        """Remove item from cart - DELETE /api/shopping-cart/"""
+        """
+        Remove item from cart - 
+        DELETE /api/shopping-cart/
+        """
         user = get_authenticated_user(request)
-        product_id = request.data.get('product_id')
+        product_id = request.data.get("product_id")
 
         if not product_id:
             return Response(
@@ -120,25 +118,23 @@ class ShoppingCartViewSet(viewsets.ViewSet):
             return Response(serializer.data)
 
         except (ShoppingCartModel.DoesNotExist, CartItemModel.DoesNotExist):
-            return Response(
-                {"error": "Cart item not found"}, 
-                status=status.HTTP_404_NOT_FOUND
-            )
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
-    @action(detail=False, methods=['post'], url_path='place-order')
+    @action(detail=False, methods=["post"], url_path="place-order")
     def place_order(self, request):
-        """Place order from cart items - creates order and invoice (payment pending)"""
+        """
+        Place order from cart items - creates order and invoice (payment pending)
+        POST /api/shopping-cart/place-order/
+        """
         user = get_authenticated_user(request)
         
-        # Get shipping details from request
         shipping_data = {
-            'shipping_full_name': request.data.get('full_name'),
-            'shipping_address': request.data.get('address'),
-            'shipping_city': request.data.get('city'),
-            'shipping_postal_code': request.data.get('postal_code')
+            "shipping_full_name": request.data.get("full_name"),
+            "shipping_address": request.data.get("address"),
+            "shipping_city": request.data.get("city"),
+            "shipping_postal_code": request.data.get("postal_code")
         }
         
-        # Validate shipping details
         for field, value in shipping_data.items():
             if not value:
                 return Response(
@@ -186,13 +182,11 @@ class ShoppingCartViewSet(viewsets.ViewSet):
                     # Reserve stock (reduce from inventory)
                     inventory_manager.adjust_stock(item.product.id, -item.quantity)
 
-                # Create invoice
                 invoice = self._create_invoice(order)
 
-                # Clear cart
                 cart.clear()
 
-                print(f"🛒 Order {order.id} placed successfully! Stock reserved, invoice generated.")
+                print(f"Order {order.id} placed successfully! Stock reserved, invoice generated.")
 
                 return Response({
                     "message": "Order placed successfully! Please proceed to payment.",
@@ -217,11 +211,14 @@ class ShoppingCartViewSet(viewsets.ViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-    @action(detail=False, methods=['post'], url_path='pay-invoice')
+    @action(detail=False, methods=["post"], url_path="pay-invoice")
     def pay_invoice(self, request):
-        """Pay an invoice using wallet - processes payment and generates receipt"""
+        """
+        Pay an invoice using wallet - processes payment and generates receipt
+        POST /api/shopping-cart/pay-invoice/
+        """
         user = get_authenticated_user(request)
-        invoice_id = request.data.get('invoice_id')
+        invoice_id = request.data.get("invoice_id")
 
         if not invoice_id:
             return Response(
@@ -239,12 +236,11 @@ class ShoppingCartViewSet(viewsets.ViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            # Process payment
             payment_result = self._process_payment(invoice, user)
             
-            if not payment_result['success']:
+            if not payment_result["success"]:
                 return Response(
-                    {"error": payment_result['error']}, 
+                    {"error": payment_result["error"]}, 
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
@@ -283,13 +279,10 @@ class ShoppingCartViewSet(viewsets.ViewSet):
 
     def _create_invoice(self, order):
         """Create an invoice for an order"""
-        # Generate unique invoice number
         invoice_number = f"INV{uuid.uuid4().hex[:8].upper()}"
         
-        # Set due date (7 days from now)
         due_date = timezone.now() + timedelta(days=7)
         
-        # Create invoice
         invoice = InvoiceModel.objects.create(
             order=order,
             invoice_number=invoice_number,
@@ -297,19 +290,17 @@ class ShoppingCartViewSet(viewsets.ViewSet):
             due_date=due_date
         )
         
-        print(f"📄 Invoice {invoice_number} created for Order {order.id} - Amount: ${order.total}")
+        print(f"Invoice {invoice_number} created for Order {order.id} - Amount: ${order.total}")
         return invoice
 
     def _process_payment(self, invoice, user):
         """Process wallet payment for an invoice"""
-        # Generate transaction ID
         transaction_id = f"TXN{uuid.uuid4().hex[:10].upper()}"
         
-        # Check if user has sufficient wallet balance
         if user.wallet < invoice.amount_due:
             return {
-                'success': False,
-                'error': f"Insufficient wallet balance. Required: ${invoice.amount_due}, Available: ${user.wallet}"
+                "success": False,
+                "error": f"Insufficient wallet balance. Required: ${invoice.amount_due}, Available: ${user.wallet}"
             }
         
         try:
@@ -325,46 +316,40 @@ class ShoppingCartViewSet(viewsets.ViewSet):
             user.wallet -= invoice.amount_due
             user.save()
             
-            # Mark payment as completed
             payment.mark_as_completed()
             
-            # Mark invoice as paid
             invoice.mark_as_paid()
             
-            # Update order payment status
             order = invoice.order
             order.payment_status = ORDER_PAYMENT_STATUS.PAID.value
             order.save()
             
-            # Generate receipt
             receipt = self._generate_receipt(payment)
             
-            print(f"💳 Payment {transaction_id} completed for Invoice {invoice.invoice_number}")
+            print(f"Payment {transaction_id} completed for Invoice {invoice.invoice_number}")
             
             return {
-                'success': True,
-                'payment': payment,
-                'receipt': receipt
+                "success": True,
+                "payment": payment,
+                "receipt": receipt
             }
             
         except Exception as e:
-            print(f"❌ Payment failed: {str(e)}")
+            print(f"Payment failed: {str(e)}")
             return {
-                'success': False,
-                'error': f"Payment processing failed: {str(e)}"
+                "success": False,
+                "error": f"Payment processing failed: {str(e)}"
             }
 
     def _generate_receipt(self, payment):
         """Generate a receipt for a completed payment"""
-        # Generate unique receipt number
         receipt_number = f"RCP{uuid.uuid4().hex[:8].upper()}"
         
-        # Create receipt
         receipt = ReceiptModel.objects.create(
             payment=payment,
             receipt_number=receipt_number,
             amount_paid=payment.amount
         )
         
-        print(f"🧾 Receipt {receipt_number} generated for Payment {payment.transaction_id}")
+        print(f"Receipt {receipt_number} generated for Payment {payment.transaction_id}")
         return receipt 
