@@ -32,7 +32,7 @@ class OrderViewSet(viewsets.ReadOnlyModelViewSet):
         Returns basic sales analytics data for the admin dashboard.
         """
         # Check permissions using HasRolePermission
-        permission_check = HasRolePermission([ROLE.ADMIN])
+        permission_check = HasRolePermission([ROLE.ADMIN, ROLE.STATISTICS_MANAGER])
         if not permission_check.has_permission(request, self):
             raise PermissionDenied("Only admin users can view analytics")
 
