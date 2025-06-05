@@ -11,6 +11,16 @@ from base.models import UserModel
 from api.serializers import UserModelSerializer
 
 class UserViewSet(viewsets.ViewSet):
+    def get_permissions(self):
+        """
+        Instantiates and returns the list of permissions that this view requires.
+        """
+        if self.action in ['login', 'signup']:
+            permission_classes = [AllowAny]
+        else:
+            permission_classes = []
+        return [permission() for permission in permission_classes]
+
     def list(self, request):
         """
         Retrieve all UserModel records.
@@ -81,7 +91,7 @@ class UserViewSet(viewsets.ViewSet):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @action(detail=False, methods=["post"], permission_classes=[AllowAny])
+    @action(detail=False, methods=["post"])
     def login(self, request):
         """
         Login endpoint.
@@ -113,18 +123,44 @@ class UserViewSet(viewsets.ViewSet):
                 status=status.HTTP_401_UNAUTHORIZED
             )
 
-    @action(detail=False, methods=["post"], permission_classes=[AllowAny])
+    @action(detail=False, methods=["post"])
     def signup(self, request):
         print("HIT SIGNUP ENDPOINT!")
         """
         Signup endpoint.
-        POST /api/user/signup
+        POST /api/user/signup/
         """
         # Set default role as customer for new signups
         request.data["role"] = ROLE.CUSTOMER.value
         
-        serializer = UserModelSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
+        # Create user with raw password (not hashed)
+        user_data = request.data.copy()
+        password = user_data.get("password")
+        
+        if not password:
+            return Response(
+                {"error": "Password is required"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Create user directly to avoid password hashing
+        try:
+            user = UserModel.objects.create(
+                username=user_data.get("username"),
+                email=user_data.get("email"),
+                firstName=user_data.get("firstName"),
+                lastName=user_data.get("lastName"),
+                phone=user_data.get("phone", ""),  # Default to empty string if not provided
+                password=password,  # Store raw password
+                role=ROLE.CUSTOMER.value,
+                wallet=0.00  # Default wallet balance for customers
+            )
+            
+            serializer = UserModelSerializer(user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to create user: {str(e)}"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )

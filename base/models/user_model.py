@@ -25,7 +25,7 @@ class UserModel(AbstractBaseUser):
     email = models.EmailField(max_length=255, unique=True)
     firstName = models.CharField(max_length=255)
     lastName = models.CharField(max_length=255)
-    phone = models.CharField(max_length=20, blank=True)
+    phone = models.CharField(max_length=20, blank=True, null=True)
     role = models.CharField(
         max_length=32,
         choices=[(role.value, role.name.title()) for role in ROLE],
