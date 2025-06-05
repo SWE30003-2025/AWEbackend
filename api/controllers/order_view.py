@@ -52,41 +52,18 @@ class OrderViewSet(viewsets.ReadOnlyModelViewSet):
             "top_products": list(top_products),
         })
 
-    @action(detail=True, methods=["get"], url_path="track")
-    def track_shipment(self, request, pk=None):
-        """
-        Track the shipment for a specific order.
-        GET /api/order/{order_id}/track/
-        """
-        order = self.get_object()
-        user = get_authenticated_user(request)
-        
-        # Check if user can access this order
-        if (order.user != user and 
-            not (hasattr(user, 'role') and user.role in [ROLE.ADMIN.value, ROLE.SHIPMENT_MANAGER.value])):
-            raise PermissionDenied("You can only track your own orders")
-        
-        if hasattr(order, 'shipment'):
-            shipment_manager = ShipmentManager()
-            tracking_info = shipment_manager.get_shipment_status(order.shipment.tracking_number)
-            return Response(tracking_info)
-        else:
-            return Response(
-                {"error": "No shipment found for this order"}, 
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-    @action(detail=True, methods=['get'], url_path='invoice')
+    @action(detail=True, methods=["get"], url_path="invoice")
     def retrieve_invoice(self, request, pk=None):
         """
         Retrieve the invoice for a specific order.
         GET /api/order/{order_id}/invoice/
         """
-        order = self.get_object() # This already filters based on get_queryset
+        order = self.get_object()
         
         try:
             invoice = InvoiceModel.objects.get(order=order)
             serializer = InvoiceModelSerializer(invoice)
+            
             return Response(serializer.data)
         except InvoiceModel.DoesNotExist:
             return Response(
@@ -94,7 +71,6 @@ class OrderViewSet(viewsets.ReadOnlyModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
         except Exception as e:
-            # Log the exception e
             return Response(
                 {"error": "An error occurred while retrieving the invoice."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
