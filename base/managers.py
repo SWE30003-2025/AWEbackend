@@ -1,10 +1,10 @@
-from base.models.product_model import ProductModel
 import uuid
-import threading
-from datetime import datetime, timedelta
+from datetime import timedelta
+
 from django.utils import timezone
-from base.models import ShipmentModel, OrderModel
-from base.enums.shipment_status import SHIPMENT_STATUS
+
+from base.models import ProductModel, ShipmentModel
+from base.enums import SHIPMENT_STATUS
 
 class InventoryManager:
     _instance = None
@@ -45,14 +45,12 @@ class ShipmentManager:
         return cls._instance
 
     def create_shipment(self, order):
-        """Create a new shipment for an order and start the shipping process"""
-        # Generate unique tracking number
+        """Create a new shipment for an order"""
         tracking_number = f"AWE{uuid.uuid4().hex[:8].upper()}"
         
-        # Calculate estimated delivery (3-7 business days)
         estimated_delivery = timezone.now() + timedelta(days=5)
         
-        # Create shipment
+        # Create shipment with PENDING status
         shipment = ShipmentModel.objects.create(
             order=order,
             tracking_number=tracking_number,
@@ -60,60 +58,31 @@ class ShipmentManager:
             estimated_delivery=estimated_delivery
         )
         
-        print(f"📦 Shipment Manager notified! Created shipment {tracking_number} for Order {order.id}")
-        
-        # Start the fake shipping process
-        self._start_shipping_timer(shipment)
+        print(f"Shipment Manager notified! Created shipment {tracking_number} for Order {order.id}")
+        print(f"Shipment status updates will be handled manually by shipment managers.")
         
         return shipment
     
-    def _start_shipping_timer(self, shipment):
-        """Start a timer to simulate the shipping process"""
-        def shipping_process():
-            # Stage 1: Processing (immediate)
-            self.update_shipment_status(shipment.id, SHIPMENT_STATUS.PROCESSING.value)
-            
-            # Stage 2: Shipped (after 5 seconds)
-            threading.Timer(5.0, lambda: self.update_shipment_status(shipment.id, SHIPMENT_STATUS.SHIPPED.value)).start()
-            
-            # Stage 3: In Transit (after 10 seconds)
-            threading.Timer(10.0, lambda: self.update_shipment_status(shipment.id, SHIPMENT_STATUS.IN_TRANSIT.value)).start()
-            
-            # Stage 4: Out for Delivery (after 15 seconds)
-            threading.Timer(15.0, lambda: self.update_shipment_status(shipment.id, SHIPMENT_STATUS.OUT_FOR_DELIVERY.value)).start()
-            
-            # Stage 5: Delivered (after 20 seconds)
-            threading.Timer(20.0, lambda: self._complete_delivery(shipment.id)).start()
-        
-        # Start the shipping process in a separate thread
-        threading.Thread(target=shipping_process, daemon=True).start()
-    
     def update_shipment_status(self, shipment_id, new_status):
-        """Update the status of a shipment"""
+        """Update the status of a shipment (for manual updates by authorized users)"""
         try:
             shipment = ShipmentModel.objects.get(id=shipment_id)
+            old_status = shipment.status
             shipment.status = new_status
-            shipment.save()
-            print(f"🚚 Shipment {shipment.tracking_number} status updated to: {new_status}")
-        except ShipmentModel.DoesNotExist:
-            print(f"❌ Shipment with id {shipment_id} not found")
-    
-    def _complete_delivery(self, shipment_id):
-        """Complete the delivery process"""
-        try:
-            shipment = ShipmentModel.objects.get(id=shipment_id)
-            shipment.status = SHIPMENT_STATUS.DELIVERED.value
-            shipment.actual_delivery = timezone.now()
-            shipment.save()
             
-            # Update order status to delivered
-            order = shipment.order
-            order.status = "delivered"
-            order.save()
+            # If status is delivered, set actual delivery time and update order status
+            if new_status == SHIPMENT_STATUS.DELIVERED.value:
+                shipment.actual_delivery = timezone.now()
+                order = shipment.order
+                order.status = "delivered"
+                order.save()
+                print(f"Order {order.id} marked as delivered!")
             
-            print(f"✅ Shipment {shipment.tracking_number} delivered successfully!")
+            shipment.save()
+            print(f"Shipment {shipment.tracking_number} status updated from {old_status} to: {new_status}")
+            
         except ShipmentModel.DoesNotExist:
-            print(f"❌ Shipment with id {shipment_id} not found")
+            print(f"Shipment with id {shipment_id} not found")
     
     def get_shipment_status(self, tracking_number):
         """Get the current status of a shipment by tracking number"""
