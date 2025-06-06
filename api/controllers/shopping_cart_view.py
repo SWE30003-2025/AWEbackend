@@ -31,8 +31,8 @@ class ShoppingCartViewSet(viewsets.ViewSet):
     def create(self, request):
         """Add item to cart - POST /api/shopping-cart/"""
         user = get_authenticated_user(request)
-        product_id = request.data.get('product_id')
-        quantity = request.data.get('quantity', 1)
+        product_id = request.data.get("product_id")
+        quantity = request.data.get("quantity", 1)
 
         if not product_id:
             return Response(
@@ -63,10 +63,11 @@ class ShoppingCartViewSet(viewsets.ViewSet):
         except ProductModel.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
-    def update(self, request, pk=None):
+    @action(detail=False, methods=["put"], url_path="update-item")
+    def update_item(self, request):
         """
         Update item quantity in cart - 
-        PUT /api/shopping-cart/
+        PUT /api/shopping-cart/update-item/
         """
         user = get_authenticated_user(request)
         product_id = request.data.get("product_id")
@@ -95,10 +96,11 @@ class ShoppingCartViewSet(viewsets.ViewSet):
         except (ShoppingCartModel.DoesNotExist, CartItemModel.DoesNotExist):
             return Response(status=status.HTTP_404_NOT_FOUND)
 
-    def destroy(self, request, pk=None):
+    @action(detail=False, methods=["delete"], url_path="remove-item")
+    def remove_item(self, request):
         """
         Remove item from cart - 
-        DELETE /api/shopping-cart/
+        DELETE /api/shopping-cart/remove-item/
         """
         user = get_authenticated_user(request)
         product_id = request.data.get("product_id")
