@@ -1,9 +1,12 @@
 import uuid
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 from django.utils import timezone
+from django.db.models import Sum, Count, F, ExpressionWrapper, DecimalField
+from django.db.models.functions import TruncDate, TruncWeek, TruncMonth, TruncYear
+from django.db.models.expressions import OuterRef, Subquery
 
-from base.models import ProductModel, ShipmentModel
+from base.models import ProductModel, ShipmentModel, OrderModel, OrderItemModel
 from base.enums import SHIPMENT_STATUS
 
 class InventoryManager:
@@ -98,3 +101,141 @@ class ShipmentManager:
             }
         except ShipmentModel.DoesNotExist:
             return None 
+
+class StatisticsManager:
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(StatisticsManager, cls).__new__(cls)
+        return cls._instance
+
+    def get_sales_by_period(self, period_type, start_date=None, end_date=None):
+        """
+        Get sales statistics for a specific period type
+        period_type: 'day', 'week', 'month', 'year', or 'ytd' (year to date)
+        """
+        # If no end date specified, use current date
+        if not end_date:
+            end_date = timezone.now()
+        
+        # If no start date specified, determine based on period type
+        if not start_date:
+            if period_type == "ytd":
+                start_date = datetime(end_date.year, 1, 1, tzinfo=end_date.tzinfo)
+            else:
+                # Default to last 30 days if no period specified
+                start_date = end_date - timedelta(days=30)
+
+        orders = OrderModel.objects.filter(
+            created_at__gte=start_date,
+            created_at__lte=end_date,
+            status="delivered"
+        )
+
+        trunc_func = {
+            "day": TruncDate("created_at"),
+            "week": TruncWeek("created_at"),
+            "month": TruncMonth("created_at"),
+            "year": TruncYear("created_at"),
+            "ytd": TruncDate("created_at")
+        }.get(period_type, TruncDate("created_at"))
+
+        order_items = OrderItemModel.objects.filter(
+            order__in=orders
+        ).annotate(
+            item_total=ExpressionWrapper(
+                F("quantity") * F("price"),
+                output_field=DecimalField(max_digits=10, decimal_places=2)
+            )
+        )
+
+        sales_by_period = orders.annotate(
+            period=trunc_func
+        ).values("period").annotate(
+            total_orders=Count("id"),
+            total_sales=Sum(
+                Subquery(
+                    order_items.filter(
+                        order=OuterRef("id")
+                    ).values("item_total")
+                )
+            )
+        ).order_by("period")
+
+        return sales_by_period
+
+    def get_top_selling_products(self, start_date=None, end_date=None, limit=10):
+        """Get top selling products within a date range"""
+        if not end_date:
+            end_date = timezone.now()
+        if not start_date:
+            start_date = end_date - timedelta(days=30)
+
+        return OrderItemModel.objects.filter(
+            order__created_at__gte=start_date,
+            order__created_at__lte=end_date,
+            order__status="delivered"
+        ).values(
+            "product__id",
+            "product__name",
+            "product__category__name"
+        ).annotate(
+            total_quantity=Sum("quantity"),
+            total_revenue=Sum(
+                ExpressionWrapper(
+                    F("quantity") * F("price"),
+                    output_field=DecimalField(max_digits=10, decimal_places=2)
+                )
+            )
+        ).annotate(
+            product_id=F("product__id"),
+            product_name=F("product__name"),
+            category_name=F("product__category__name")
+        ).values(
+            "product_id",
+            "product_name",
+            "category_name",
+            "total_quantity",
+            "total_revenue"
+        ).order_by("-total_quantity")[:limit]
+
+    def get_sales_summary(self, start_date=None, end_date=None):
+        """Get overall sales summary for a date range"""
+        if not end_date:
+            end_date = timezone.now()
+        if not start_date:
+            start_date = end_date - timedelta(days=30)
+
+        orders = OrderModel.objects.filter(
+            created_at__gte=start_date,
+            created_at__lte=end_date,
+            status="delivered"
+        )
+
+        total_revenue = OrderItemModel.objects.filter(
+            order__in=orders
+        ).aggregate(
+            total=Sum(
+                ExpressionWrapper(
+                    F("quantity") * F("price"),
+                    output_field=DecimalField(max_digits=10, decimal_places=2)
+                )
+            )
+        )["total"] or 0
+
+        total_orders = orders.count()
+        total_items_sold = OrderItemModel.objects.filter(
+            order__in=orders
+        ).aggregate(
+            total=Sum("quantity")
+        )["total"] or 0
+
+        return {
+            "period_start": start_date,
+            "period_end": end_date,
+            "total_orders": total_orders,
+            "total_revenue": total_revenue,
+            "total_items_sold": total_items_sold,
+            "average_order_value": total_revenue / total_orders if total_orders > 0 else 0
+        } 

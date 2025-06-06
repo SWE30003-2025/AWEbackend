@@ -1,12 +1,11 @@
-from django.db.models import Sum
-
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
 
-from base.models import OrderModel, OrderItemModel, InvoiceModel
+from base.models import OrderModel, InvoiceModel
 from base.enums import ROLE
+from base.managers import StatisticsManager
 
 from api.serializers import InvoiceModelSerializer, OrderModelSerializer
 from api.permissions import HasRolePermission, get_authenticated_user
@@ -32,23 +31,33 @@ class OrderViewSet(viewsets.ReadOnlyModelViewSet):
         if not HasRolePermission([ROLE.ADMIN, ROLE.STATISTICS_MANAGER]).has_permission(request, self):
             raise PermissionDenied("Only admin and statistics manager users can view analytics")
 
-        total_orders = OrderModel.objects.count()
-        total_sales = sum(
-            sum(item.price * item.quantity for item in order.items.all())
-            for order in OrderModel.objects.all()
+        period = request.query_params.get("period", "month")
+        start_date = request.query_params.get("start_date", None)
+        end_date = request.query_params.get("end_date", None)
+
+        stats_manager = StatisticsManager()
+
+        sales_by_period = stats_manager.get_sales_by_period(
+            period_type=period,
+            start_date=start_date,
+            end_date=end_date
         )
 
-        top_products = (
-            OrderItemModel.objects
-                .values("product__name")
-                .annotate(total_sold=Sum("quantity"))
-                .order_by("-total_sold")[:5]
+        top_products = stats_manager.get_top_selling_products(
+            start_date=start_date,
+            end_date=end_date,
+            limit=5
+        )
+
+        summary = stats_manager.get_sales_summary(
+            start_date=start_date,
+            end_date=end_date
         )
 
         return Response({
-            "total_orders": total_orders,
-            "total_sales": total_sales,
-            "top_products": list(top_products),
+            "summary": summary,
+            "sales_by_period": list(sales_by_period),
+            "top_products": list(top_products)
         })
 
     @action(detail=True, methods=["get"], url_path="invoice")
