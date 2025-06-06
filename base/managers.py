@@ -141,26 +141,30 @@ class StatisticsManager:
             "ytd": TruncDate("created_at")
         }.get(period_type, TruncDate("created_at"))
 
-        order_items = OrderItemModel.objects.filter(
-            order__in=orders
+        if period_type == "day":
+            period_trunc = TruncDate("order__created_at")
+        elif period_type == "week":
+            period_trunc = TruncWeek("order__created_at")
+        elif period_type == "month":
+            period_trunc = TruncMonth("order__created_at")
+        elif period_type == "year":
+            period_trunc = TruncYear("order__created_at")
+        else:  # ytd or default
+            period_trunc = TruncDate("order__created_at")
+
+        sales_by_period = OrderItemModel.objects.filter(
+            order__created_at__gte=start_date,
+            order__created_at__lte=end_date,
+            order__status="delivered"
         ).annotate(
+            period=period_trunc,
             item_total=ExpressionWrapper(
                 F("quantity") * F("price"),
                 output_field=DecimalField(max_digits=10, decimal_places=2)
             )
-        )
-
-        sales_by_period = orders.annotate(
-            period=trunc_func
         ).values("period").annotate(
-            total_orders=Count("id"),
-            total_sales=Sum(
-                Subquery(
-                    order_items.filter(
-                        order=OuterRef("id")
-                    ).values("item_total")
-                )
-            )
+            total_orders=Count("order__id", distinct=True),
+            total_sales=Sum("item_total")
         ).order_by("period")
 
         return sales_by_period
